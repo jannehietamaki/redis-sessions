@@ -47,7 +47,7 @@ class RedisSessions extends EventEmitter
 			@redis = RedisInst.createClient(o.options)
 		else
 			@redis = RedisInst.createClient(o.port or 6379, o.host or "127.0.0.1", o.options or {})
-	
+
 		@connected = @redis.connected or false
 		@redis.on "connect", =>
 			@connected = true
@@ -93,10 +93,10 @@ class RedisSessions extends EventEmitter
 
 	# ## Create
 	#
-	# Creates a session for an app and id. 
+	# Creates a session for an app and id.
 	#
 	# **Parameters:**
-	# 
+	#
 	# An object with the following keys:
 	#
 	# * `app` must be [a-zA-Z0-9_-] and 3-20 chars long
@@ -113,7 +113,7 @@ class RedisSessions extends EventEmitter
 	#		ttl: 3600
 	#	}, callback)
 	#
-	# Returns the token when successful. 
+	# Returns the token when successful.
 
 
 	create: (options, cb) =>
@@ -154,7 +154,7 @@ class RedisSessions extends EventEmitter
 		mc.push(thesession)
 		# Run the redis statement
 		@redis.multi(mc).exec (err, resp) ->
-			if err 
+			if err
 				cb(err)
 				return
 			if resp[4] isnt "OK"
@@ -167,10 +167,10 @@ class RedisSessions extends EventEmitter
 
 	# ## Get
 	#
-	# Get a session for an app and token. 
+	# Get a session for an app and token.
 	#
 	# **Parameters:**
-	# 
+	#
 	# An object with the following keys:
 	#
 	# * `app` must be [a-zA-Z0-9_-] and 3-20 chars long
@@ -188,7 +188,7 @@ class RedisSessions extends EventEmitter
 				return
 			# Prepare the data
 			o = @_prepareSession(resp)
-			
+
 			if o is null
 				cb(null, {})
 				return
@@ -212,10 +212,10 @@ class RedisSessions extends EventEmitter
 
 	# ## Kill
 	#
-	# Kill a session for an app and token. 
+	# Kill a session for an app and token.
 	#
 	# **Parameters:**
-	# 
+	#
 	# An object with the following keys:
 	#
 	# * `app` must be [a-zA-Z0-9_-] and 3-20 chars long
@@ -255,7 +255,7 @@ class RedisSessions extends EventEmitter
 			if err
 				cb(err)
 				return
-			# NOW. If the last reply of the multi statement is 0 then this was the last session.  
+			# NOW. If the last reply of the multi statement is 0 then this was the last session.
 			# We need to remove the ZSET for this user also:
 			if resp[4] is 0
 				@redis.zrem "#{@redisns}#{options.app}:_users", options.id, ->
@@ -360,7 +360,7 @@ class RedisSessions extends EventEmitter
 				for e in resp[3...] by 4
 					total = total + e
 
-				# NOW. If the last reply of the multi statement is 0 then this was the last session.  
+				# NOW. If the last reply of the multi statement is 0 then this was the last session.
 				# We need to remove the ZSET for this user also:
 				if _.last(resp) is 0
 					@redis.zrem "#{@redisns}#{options.app}:_users", options.id, ->
@@ -390,16 +390,16 @@ class RedisSessions extends EventEmitter
 
 	# ## Set
 	#
-	# Set/Update/Delete custom data for a single session.  
+	# Set/Update/Delete custom data for a single session.
 	# All custom data is stored in the `d` object which is a simple hash object structure.
 	#
-	# `d` might contain **one or more** keys with the following types: `string`, `number`, `boolean`, `null`.  
+	# `d` might contain **one or more** keys with the following types: `string`, `number`, `boolean`, `null`.
 	# Keys with all values except `null` will be stored. If a key containts `null` the key will be removed.
-	# 
+	#
 	# Note: If `d` already contains keys that are not supplied in the set request then these keys will be untouched.
 	#
 	# **Parameters:**
-	# 
+	#
 	# An object with the following keys:
 	#
 	# * `app` must be [a-zA-Z0-9_-] and 3-20 chars long
@@ -428,7 +428,7 @@ class RedisSessions extends EventEmitter
 					nullkeys.push(e)
 			# OK ready to set some data
 			if resp.d
-				resp.d = _.extend(_.omit(resp.d, nullkeys), _.omit(options.d, nullkeys))				
+				resp.d = _.extend(_.omit(resp.d, nullkeys), _.omit(options.d, nullkeys))
 			else
 				resp.d = _.omit(options.d, nullkeys)
 			# We now have a cleaned version of resp.d ready to save back to Redis.
@@ -504,6 +504,32 @@ class RedisSessions extends EventEmitter
 			return
 		return
 
+
+	# ## Sessions of ID (soid)
+	#
+	# Returns first active session of a single id and touch the counters
+	#
+	# **Parameters:**
+	#
+	# An object with the following keys:
+	#
+	# * `app` must be [a-zA-Z0-9_-] and 3-20 chars long
+	# * `id` must be [a-zA-Z0-9_-] and 1-64 chars long
+	#
+
+	getsoid: (options, cb) =>
+		options = @_validate(options, ["app","id"], cb)
+		if options is false
+			return
+		@redis.smembers "#{@redisns}#{options.app}:us:#{options.id}", (err, resp) =>
+			if err
+				cb(err)
+				return
+			return cb(null, {}) if resp.length == 0
+			@get({ app:options.app, token:resp[0]}, cb)
+			return
+		return
+
 	# Helpers
 
 	_createMultiStatement: (app, token, id, ttl) ->
@@ -511,7 +537,7 @@ class RedisSessions extends EventEmitter
 		[
 			["zadd", "#{@redisns}#{app}:_sessions", now, "#{token}:#{id}"]
 			["zadd", "#{@redisns}#{app}:_users", now, id]
-			["zadd", "#{@redisns}SESSIONS", now + ttl, "#{app}:#{token}:#{id}"]	
+			["zadd", "#{@redisns}SESSIONS", now + ttl, "#{app}:#{token}:#{id}"]
 		]
 
 
@@ -524,7 +550,7 @@ class RedisSessions extends EventEmitter
 
 		# add the current time in ms to the very end seperated by a Z
 		t + 'Z' + new Date().getTime().toString(36)
-		
+
 
 	_handleError: (cb, err, data={}) =>
 		# try to create a error Object with humanized message
@@ -532,7 +558,7 @@ class RedisSessions extends EventEmitter
 			_err = new Error()
 			_err.name = err
 			_err.message = @_ERRORS?[err]?(data) or "unkown"
-		else 
+		else
 			_err = err
 		cb(_err)
 		return
@@ -553,7 +579,7 @@ class RedisSessions extends EventEmitter
 		if session[0] is null
 			return null
 		# Create the return object
-		o = 
+		o =
 			id: session[0]
 			r: Number(session[1])
 			w: Number(session[2])
@@ -597,7 +623,7 @@ class RedisSessions extends EventEmitter
 		ip:		/^.{1,39}$/
 		token:	/^([a-zA-Z0-9]){64}$/
 
-                    
+
 	_validate: (o, items, cb) ->
 		for item in items
 			switch item
@@ -660,6 +686,6 @@ class RedisSessions extends EventEmitter
 		"missingParameter": "No <%= item %> supplied"
 		"invalidFormat": "Invalid <%= item %> format"
 		"invalidValue": "<%= msg %>"
-	
+
 
 module.exports = RedisSessions

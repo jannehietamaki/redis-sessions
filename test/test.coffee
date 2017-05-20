@@ -1,7 +1,7 @@
 _ = require "lodash"
 should = require "should"
 async = require "async"
-RedisSessions = require "../index" 
+RedisSessions = require "../index"
 
 describe 'Redis-Sessions Test', ->
 	rs = null
@@ -20,14 +20,28 @@ describe 'Redis-Sessions Test', ->
 		return
 
 	after (done) ->
-		done()		
+		done()
 		return
-	
+
 
 	it 'get a RedisSessions instance', (done) ->
 		rs = new RedisSessions()
 		rs.should.be.an.instanceOf RedisSessions
 		done()
+		return
+
+	it 'Remove all sessions from app1', (done) ->
+		rs.killall {app:app1}, (err, resp) ->
+			should.exist(resp.kill)
+			done()
+			return
+		return
+
+	it 'Remove all sessions from app2', (done) ->
+		rs.killall {app:app2}, (err, resp) ->
+			should.exist(resp.kill)
+			done()
+			return
 		return
 
 	describe 'GET: Part 1', ->
@@ -79,7 +93,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Get a Session with valid token format but token should not exist', (done) ->
 			rs.get {app: app1, token: "0123456789012345678901234567890123456789012345678901234567891234"}, (err, resp) ->
 				should.not.exist(err)
@@ -88,7 +102,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		return
 
 	describe 'CREATE: Part 1', ->
@@ -98,14 +112,14 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Create a session with invalid data: no id supplied', (done) ->
 			rs.create {app: app1}, (err, resp) ->
 				err.message.should.equal("No id supplied")
 				done()
 				return
 			return
-		
+
 		it 'Create a session with invalid data: no ip supplied', (done) ->
 			rs.create {app: app1, id:"user1"}, (err, resp) ->
 				err.message.should.equal("No ip supplied")
@@ -119,7 +133,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Create a session with invalid data: zero length ip supplied', (done) ->
 			rs.create {app: app1, id:"user1", ip:""}, (err, resp) ->
 				err.message.should.equal("No ip supplied")
@@ -133,7 +147,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Create a session with valid data: should return a token', (done) ->
 			rs.create {app: app1, id:"user1", ip: "127.0.0.1", ttl: 30}, (err, resp) ->
 				should.not.exist(err)
@@ -143,7 +157,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Activity should show 1 user', (done) ->
 			rs.activity {app: app1, dt: 60}, (err, resp) ->
 				should.not.exist(err)
@@ -198,7 +212,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Create another session with valid data: should return a token', (done) ->
 			rs.create {app: app1, id:"user2", ip: "127.0.0.1", ttl: 10}, (err, resp) ->
 				should.not.exist(err)
@@ -208,7 +222,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Activity should show 2 users', (done) ->
 			rs.activity {app: app1, dt: 60}, (err, resp) ->
 				should.not.exist(err)
@@ -229,7 +243,7 @@ describe 'Redis-Sessions Test', ->
 				return
 			return
 
-		
+
 		it 'Create a session for another app with valid data: should return a token', (done) ->
 			rs.create {app: app2, id:"user1", ip: "127.0.0.1", ttl: 30}, (err, resp) ->
 				should.not.exist(err)
@@ -239,7 +253,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Activity should show 1 user', (done) ->
 			rs.activity {app: app2, dt: 60}, (err, resp) ->
 				should.not.exist(err)
@@ -262,7 +276,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Activity should show 1001 user', (done) ->
 			rs.activity {app: app2, dt: 60}, (err, resp) ->
 				should.not.exist(err)
@@ -294,7 +308,6 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-
 		it 'Check if we have 2 sessions for bulkuser_999', (done) ->
 			rs.soid {app: app2, id: "bulkuser_999"}, (err, resp) ->
 				should.not.exist(err)
@@ -476,6 +489,14 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
+		it 'Can access session with user id', (done) ->
+			rs.getsoid {app: app1, id:"user2"}, (err, resp) ->
+				should.not.exist(err)
+				should.exist(resp)
+				resp.d.should.have.keys('hi','count','premium')
+				done()
+				return
+			return
 		it 'Remove a param from token2: should work', ( done ) ->
 			rs.set {app: app1, token: token2, d: {hi: null}}, (err, resp) ->
 				should.not.exist(err)
@@ -525,7 +546,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 		it 'Set some params for token2: should work', ( done ) ->
 			rs.set {app: app1, token: token2, d: {a: "sometext", b: 20, c: true, d: false}}, (err, resp) ->
 				should.not.exist(err)
@@ -582,7 +603,7 @@ describe 'Redis-Sessions Test', ->
 				done()
 				return
 			return
-		
+
 
 		it 'Issue the Quit Command.', (done) ->
 			rs.quit()
