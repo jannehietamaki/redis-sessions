@@ -14,9 +14,6 @@
     "redis": "^2.x",
     "lodash": "^4.x"
   },
-  "optionalDependencies": {
-    "hiredis": "^0.5.x"
-  },
   "devDependencies": {
     "mocha": "3.0.2 ",
     "should": "11.1.0",
